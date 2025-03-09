@@ -27,6 +27,7 @@ model User {
   sessions    Session[]
   connections Connection[]
   passkey     Passkey[]
+  attendee    Attendee?
 }
 
 model Note {
@@ -183,4 +184,55 @@ model Passkey {
   transports     String? // Stored as comma-separated values
 
   @@index(userId)
+}
+
+model Restaurant {
+  id          String   @id @default(cuid())
+  name        String
+  address     String
+  cuisineType String
+  priceLevel  Int
+  rating      Float
+  lat         Float
+  lng         Float
+  photoUrl    String?
+  mapsUrl     String?
+  websiteUrl  String?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  dinnerGroups DinnerGroup[]
+}
+
+model DinnerGroup {
+  id           String   @id @default(cuid())
+  notes        String?
+  createdAt    DateTime @default(now())
+  
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  restaurantId String
+  
+  attendees    Attendee[]
+
+  // non-unique foreign key
+  @@index([restaurantId])
+}
+
+model Attendee {
+  id            String   @id @default(cuid())
+  createdAt     DateTime @default(now())
+  
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  userId        String
+  
+  dinnerGroup   DinnerGroup @relation(fields: [dinnerGroupId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  dinnerGroupId String
+
+  // non-unique foreign keys
+  @@index([userId])
+  @@index([dinnerGroupId])
+  
+  // A user can only attend one dinner group at a time
+  @@unique([userId])
 }
