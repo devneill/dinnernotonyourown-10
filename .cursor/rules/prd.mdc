@@ -1,0 +1,185 @@
+---
+description: Product Requirements Document
+globs: 
+alwaysApply: true
+---
+# Rules
+
+- Do one phase at a time. Never start another phase until the current one is complete. We can perform steps within a phase in parallel.
+- Pay careful attention to the Rules of each phase - do not ignore them
+
+# Features
+
+
+### 1. Restaurant Discovery
+
+- Filterable list with restaurant cards
+- Display key restaurant information:
+	- Name, cuisine type, price range, rating
+	- Distance from your location
+	- Address and basic contact info
+	- Direct link to restaurant website/menu if available
+	- Google Maps link for easy navigation
+- Simple filtering options:
+	- Distance (1mi, 2mi, 5mi, 10mi)
+	- Rating (above 1, 2, 3, or 4 stars)
+	- Price range (all, $, $$, $$$ or $$$$)
+
+### 2. Attendee Coordination
+
+- "Join dinner" button for each restaurant
+- Display real-time count of attendees going to each place
+- Once attending a dinner group
+	- you can leave the dinner group
+	- you can only be a part of one dinner group at a time
+
+# Implementation
+
+
+## Phase 1 - Project Setup
+
+1. Pull the latest Epic Stack with `npx create-epic-app@latest`
+2. Add required API Keys for Google and Resend
+	1. Add required placeholders to .env.example
+	2. Add required placeholders to .env
+	3. Update env.server so the env var types are correct
+	4. Ask me to add the real keys to .env, and then deploy them to Fly with `fly secrets set`
+
+## Phase 2 - Database Fetching and Storage
+
+1. Add db models
+	- **Restaurants** (cached from API):
+		- id, name, address, cuisineType, priceLevel, rating, lat, lng, photoUrl, mapsUrl, websiteUrl
+	- **DinnerGroups**:
+		- id, restaurantId, notes, createdAt
+	- **Attendees**:
+		- id, userId, dinnerGroupId, createdAt
+2. Run the migrations
+3. Run `npx prisma db seed` (don't edit the seed file, just run it)
+
+## Phase 3 - APIs
+
+1. Implement the APIs below
+
+### Resend
+
+- this is set up already
+- we need to update the domain in `utils/email.server` 
+
+### Google Places
+
+- Lives in `utils/providers/google-places.server.ts` 
+- Two primary Google API endpoints:
+	- Nearby Search: [https://maps.googleapis.com/maps/api/place/nearbysearch/json](https://maps.googleapis.com/maps/api/place/nearbysearch/json)
+	- Place Details: [https://maps.googleapis.com/maps/api/place/details/json](https://maps.googleapis.com/maps/api/place/details/json)
+	- use the types from `@types/google.maps` 
+- Cache results to minimise API calls and avoid rate limits
+- Support filtering by various parameters
+- Store restaurant data in the database for persistence
+
+#### Core Functions
+
+- **getNearbyRestaurants**
+	- Purpose: Main function to retrieve restaurant data
+	- Parameters:
+		- radius: Number (default: 2000 meters)
+		- type: String (default: 'restaurant')
+		- minPrice: Number (optional)
+		- maxPrice: Number (optional)
+		- keyword: String (optional)
+		- forceRefresh: Boolean (default: false)
+		- userLocation: Object (optional, contains lat/lng)
+	- Caching:
+		- TTL: 24 hours (0 if force refresh)
+		- Stale-while-revalidate: 1 hour
+		- Cache key based on all parameters
+- **fetchAndStoreRestaurants**
+	- Purpose: Fetch restaurants from Google API and store in database
+	- Parameters: Same as getNearbyRestaurants except forceRefresh
+	- Process:
+		1. Build Google Places API URL with parameters
+		2. Fetch data from API
+		3. For each result, get additional details
+		4. Upsert each restaurant to database
+		5. Return array of restaurant objects
+- **getPlaceDetails**
+	- Purpose: Get additional details for a specific place
+	- Parameters: placeId (Google Place ID)
+	- Caching: 7 days TTL
+	- Returns: Object with website and URL
+
+#### Helper Functions
+
+- getPhotoUrl: Generate URL for restaurant photos
+- extractCuisineType: Map Google Place types to user-friendly cuisine types
+
+#### Caching Strategy
+
+- Use cachified with LRU cache
+- Primary cache for restaurant lists: 24 hours
+- Place details cache: 7 days
+- Support force refresh to bypass cache
+- Database acts as persistent cache
+
+#### Error Handling
+
+- Validate API key presence
+- Check API response status
+- Log errors with descriptive messages
+- Propagate errors to caller
+
+#### Implementation Notes
+
+- When forceRefresh is true, clear existing restaurants from database
+- Use database as first source of truth when not forcing refresh
+- Map Google's place types to more user-friendly cuisine types
+- Generate relative URLs for photos to proxy through application resources
+
+## Phase 4 - Resources
+
+1. Add Utility functions
+	1. `utils/restaurants.server.ts` - a collection of Restaurant db utils
+2. Add Resource routes
+	- Rules:
+		- Use `react-router` imports - DO NOT USE ANY `@remix-run/*`  imports
+		- DO NOT use a `json({})` wrapper for server function responses. Just return the object directly.
+	- Routes:
+		- `routes/resources/restaurants+/index` for fetching restaurants based on live location
+		- `routes/resources/restaurants+/join` for joining a DinnerGroup
+		- `routes/resources/restaurants+/leave` for leaving a DinnerGroup
+
+## Phase 5 - UI
+
+1. Add UI routes
+	- Rules:
+		- Use `react-router` imports - DO NOT USE ANY `@remix-run/*`  imports
+		- DO NOT use client side state or fetching.
+		- Manage state with server side loaders and actions
+		- DO NOT use a `json({})` wrapper for server function responses. Just return the object directly.
+		- Use Forms  for state management when a full page reload makes sense
+		- Use Fetchers for state management for smaller UI updates
+		- Use Zod for form/fetcher schema validation
+		- Use Conform for Form/Fetcher handling 
+		- Use loading states and optimistic UI with suspense and promise responses from the server
+		- When you install new shadcn/ui components:
+			- Install `lucide-react` for icons
+			- Install components with `npx shadcn@latest`
+			- Update all new components that have `#app/lib/utils` imports to be `#app/utils/misc.tsx` 
+
+
+	- Routes 
+		1. `routes/users+/$username_/restaurants` 
+			- the user should be able to navigate here using the nav dropdown
+			- use the browsers geolocation api to fetch a list of nearby restaurants
+			- filters should be url params
+			- use fetchers to handle joining and leaving restaurants
+
+# Phase 6 - Deployment
+
+1. Push to GitHub to deploy
+2. Connect to custom domain
+	- Domain is dinnernotonyourown.com
+	- Domain is provided by CloudFlare
+	- We need to add A, AAAA, CNAME and Acme challenge records
+	- Set up the root domain and the [www](http://www). subdomain
+	- Use `fly certs` instead of `fly domains` (it is deprecated)
