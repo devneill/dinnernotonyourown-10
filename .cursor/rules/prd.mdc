@@ -1,5 +1,5 @@
 ---
-description: Product Requirements Document
+description: Product Requirements Documentgclean
 globs: 
 alwaysApply: true
 ---
@@ -45,7 +45,7 @@ alwaysApply: true
 	3. Update env.server so the env var types are correct
 	4. Ask me to add the real keys to .env, and then deploy them to Fly with `fly secrets set`
 
-## Phase 2 - Database Fetching and Storage
+## Phase 2 - Database
 
 1. Add db models
 	- **Restaurants** (cached from API):
@@ -57,21 +57,70 @@ alwaysApply: true
 2. Run the migrations
 3. Run `npx prisma db seed` (don't edit the seed file, just run it)
 
-## Phase 3 - APIs
+## Phase 3 - APIs and Utils
 
-1. Implement the APIs below
+1. Implement the APIs described in #API Details
+2. Add Utility functions
+	1. `utils/restaurants.server.ts` - a collection of Restaurant db utils
+
+## Phase 4 - Resources
+
+1. Add Resource routes
+	- Rules:
+		- Use `react-router` imports - DO NOT USE ANY `@remix-run/*`  imports
+		- DO NOT use a `json({})` wrapper for server function responses. Just return the object directly.
+	- Routes:
+		- `routes/resources/restaurants+/index` for fetching restaurants based on live location
+		- `routes/resources/restaurants+/join` for joining a DinnerGroup
+		- `routes/resources/restaurants+/leave` for leaving a DinnerGroup
+
+## Phase 5 - UI
+
+1. Add UI Components needed for the next step
+	- Rules:
+		- Install components with `npx shadcn@latest`
+		- Update all new components that have `#app/lib/utils` imports to be `#app/utils/misc.tsx`
+		- Install `lucide-react` for icons
+2. Add UI routes
+	- Rules:
+		- Use `react-router` imports - DO NOT USE ANY `@remix-run/*`  imports
+		- DO NOT use client side state or fetching.
+		- Manage state with server side loaders and actions
+		- DO NOT use a `json({})` wrapper for server function responses. Just return the object directly.
+		- Use Forms  for state management when a full page reload makes sense
+		- Use Fetchers for state management for smaller UI updates
+		- Use Zod for form/fetcher schema validation
+		- Use Conform for Form/Fetcher handling
+		- Use loading states and optimistic UI with suspense and promise responses from the server
+	- Routes
+		1. `routes/users+/$username_+/restaurants`
+
+			- the user should be able to navigate here using the nav dropdown (use a magnifying glass icon)
+
+			- use the browsers geolocation api to fetch a list of nearby restaurants
+
+			- filters should be url params
+
+			- use fetchers to handle joining and leaving restaurants
+
+# Phase 6 - Deployment
+
+1. Push to GitHub to deploy
+2. Connect to custom domain
+	- Domain is dinnernotonyourown.com
+	- Domain is provided by CloudFlare
+	- We need to add A, AAAA, CNAME and Acme challenge records
+	- Set up the rootain and the [www](mdc:http:/www). subdomain
+	- Use `fly certs` instead of `fly domains` (it is deprecated)
+
+# API Details
+
 
 ### Resend
 
 - this is set up already
-- we need to update the domain in `utils/email.server` 
-
-### Google Places
-
-- Lives in `utils/providers/google-places.server.ts` 
-- Two primary Google API endpoints:
-	- Nearby Search: [https://maps.googleapis.com/maps/api/place/nearbysearch/json](https://maps.googleapis.com/maps/api/place/nearbysearch/json)
-	- Place Details: [https://maps.googleapis.com/maps/api/place/details/json](https://maps.googleapis.com/maps/api/place/details/json)
+- we need to update the domain in `utiders/google-places.y Search: [https://maps.googleapis.com/maps/api/place/nearbysearch/json](mdc:https:/maps.googleapis.com/maps/api/place/nearbysearch/json)
+	- Place Details: [https://maps.googleapis.com/maps/api/place/details/json](mdc:https:/maps.googleapis.com/maps/api/place/details/json)
 	- use the types from `@types/google.maps` 
 - Cache results to minimise API calls and avoid rate limits
 - Support filtering by various parameters
@@ -134,52 +183,3 @@ alwaysApply: true
 - Use database as first source of truth when not forcing refresh
 - Map Google's place types to more user-friendly cuisine types
 - Generate relative URLs for photos to proxy through application resources
-
-## Phase 4 - Resources
-
-1. Add Utility functions
-	1. `utils/restaurants.server.ts` - a collection of Restaurant db utils
-2. Add Resource routes
-	- Rules:
-		- Use `react-router` imports - DO NOT USE ANY `@remix-run/*`  imports
-		- DO NOT use a `json({})` wrapper for server function responses. Just return the object directly.
-	- Routes:
-		- `routes/resources/restaurants+/index` for fetching restaurants based on live location
-		- `routes/resources/restaurants+/join` for joining a DinnerGroup
-		- `routes/resources/restaurants+/leave` for leaving a DinnerGroup
-
-## Phase 5 - UI
-
-1. Add UI routes
-	- Rules:
-		- Use `react-router` imports - DO NOT USE ANY `@remix-run/*`  imports
-		- DO NOT use client side state or fetching.
-		- Manage state with server side loaders and actions
-		- DO NOT use a `json({})` wrapper for server function responses. Just return the object directly.
-		- Use Forms  for state management when a full page reload makes sense
-		- Use Fetchers for state management for smaller UI updates
-		- Use Zod for form/fetcher schema validation
-		- Use Conform for Form/Fetcher handling 
-		- Use loading states and optimistic UI with suspense and promise responses from the server
-		- When you install new shadcn/ui components:
-			- Install `lucide-react` for icons
-			- Install components with `npx shadcn@latest`
-			- Update all new components that have `#app/lib/utils` imports to be `#app/utils/misc.tsx` 
-
-
-	- Routes 
-		1. `routes/users+/$username_/restaurants` 
-			- the user should be able to navigate here using the nav dropdown
-			- use the browsers geolocation api to fetch a list of nearby restaurants
-			- filters should be url params
-			- use fetchers to handle joining and leaving restaurants
-
-# Phase 6 - Deployment
-
-1. Push to GitHub to deploy
-2. Connect to custom domain
-	- Domain is dinnernotonyourown.com
-	- Domain is provided by CloudFlare
-	- We need to add A, AAAA, CNAME and Acme challenge records
-	- Set up the root domain and the [www](http://www). subdomain
-	- Use `fly certs` instead of `fly domains` (it is deprecated)
