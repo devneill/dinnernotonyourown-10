@@ -1,4 +1,4 @@
-app = "dinnernotonyourown-9-640f"
+app = "dinnernotonyourown-10-c37a"
 primary_region = "sjc"
 kill_signal = "SIGINT"
 kill_timeout = 5

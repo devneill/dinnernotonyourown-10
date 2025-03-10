@@ -10,9 +10,9 @@ const schema = z.object({
 	CACHE_DATABASE_PATH: z.string(),
 	// If you plan on using Sentry, remove the .optional()
 	SENTRY_DSN: z.string().optional(),
-	// If you plan to use Resend, remove the .optional()
+	// Required for sending emails
 	RESEND_API_KEY: z.string(),
-	// Google Places API key
+	// Required for Google Places API
 	GOOGLE_PLACES_API_KEY: z.string(),
 	// If you plan to use GitHub auth, remove the .optional()
 	GITHUB_CLIENT_ID: z.string().optional(),
